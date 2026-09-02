@@ -14,6 +14,9 @@ const path = require('path');
 const app = express();
 app.use(cors());
 
+const jobQueue = new JobQueue();
+const jobManager = new JobManager();
+
 app.get('/jobs/:id/download', (req, res) => {
   const job = jobManager.getJobById(req.params.id);
 
@@ -58,8 +61,8 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 
-const jobQueue = new JobQueue();
-const jobManager = new JobManager();
+
+
 
 io.on('connection', (socket) => { // Listen for client connections through Socket.IO
   console.log('Client connected:', socket.id);
