@@ -1,3 +1,6 @@
+import { API_URL } from '../config';
+
+
 function JobCard({ job }) {
   function getStatusText() {
     if (job.status === 'queued') {
@@ -70,7 +73,7 @@ function JobCard({ job }) {
 
           <a
             className="download-button"
-            href={`http://localhost:5000/jobs/${job.id}/download`}
+            href={`${API_URL}/jobs/${job.id}/download`}
           >
             Download Result
           </a>

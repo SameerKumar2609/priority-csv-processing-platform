@@ -1,3 +1,4 @@
+import { API_URL } from './config';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
@@ -5,7 +6,7 @@ import './App.css';
 import JobList from './components/JobList';
 import UploadForm from './components/UploadForm';
 
-const socket = io('http://localhost:5000');
+const socket = io(API_URL);
 
 function App() {
   const [jobs, setJobs] = useState([]);
@@ -45,7 +46,7 @@ function App() {
 
   async function fetchJobs() {
     try {
-      const response = await fetch('http://localhost:5000/jobs');
+      const response = await fetch(`${API_URL}/jobs`);
 
       const data = await response.json();
 

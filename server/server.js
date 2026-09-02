@@ -93,7 +93,7 @@ function processQueue() {
 
 
 // Create 3 workers
-const workerManager = new WorkerManager(3, processQueue, sendJobUpdate);
+const workerManager = new WorkerManager(1, processQueue, sendJobUpdate);
 
 workerManager.createWorkers();
 

@@ -1,3 +1,4 @@
+import { API_URL } from '../config';
 import { useRef, useState } from 'react';
 
 function UploadForm({ onUpload }) {
@@ -32,7 +33,7 @@ function UploadForm({ onUpload }) {
       setUploading(true);
 
       const response = await fetch(
-        'http://localhost:5000/upload',
+        `${API_URL}/upload`,
         {
           method: 'POST',
           body: formData
