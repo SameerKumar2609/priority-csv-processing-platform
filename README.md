@@ -1,29 +1,53 @@
-# Binaire Freznel Assessment
+# Priority-Based CSV Processing Platform
 
-A multi-user CSV processing system built with React, Node.js, Express, Socket.IO, and Node.js Worker Threads.
+An asynchronous, multi-user CSV processing platform built with React, Node.js, Express, Socket.IO, and Node.js Worker Threads. The system models a background job-processing workflow where uploaded workloads are queued, prioritized, processed independently, and monitored in real time.
 
 ## Live Demo
 
-Frontend:
+**Frontend:**  
 https://binaire-freznel-assessment-j1o31hb3g-sameers-projects-a0b6ef52.vercel.app/
 
-Backend:
+**Backend:**  
 https://binaire-freznel-assessment-7p5b.onrender.com
+
+## Overview
+
+The platform is designed around a common background-processing pattern:
+
+```text
+User Upload
+    ↓
+REST API
+    ↓
+Job Creation
+    ↓
+Priority Queue
+    ↓
+Worker Thread
+    ↓
+CSV Processing
+    ↓
+Real-Time Progress Updates
+    ↓
+Client Dashboard
+```
+
+Instead of performing the CSV calculation directly inside the HTTP request, the server creates a job and processes the workload asynchronously. This keeps the main Node.js server responsible for API, queue, and real-time communication while CPU-intensive CSV processing runs in a Worker Thread.
 
 ## Features
 
 - Upload CSV files containing integers and floating-point numbers
-- Select Low or High priority
-- Queue multiple files for processing
-- High-priority waiting jobs are processed before low-priority waiting jobs
-- A job already being processed is not interrupted by a newly uploaded high-priority job
-- CSV processing uses Node.js Worker Threads
-- Real-time updates using Socket.IO
-- All connected clients can see queue and file status changes
-- Shows uploaded, waiting, processing, progress, completed, and error states
-- Displays the calculated sum of all numeric values in the CSV
-- Provides a result download after processing
-- Responsive UI with simple animations and status indicators
+- Assign Low or High priority to each job
+- Queue multiple files for background processing
+- Process waiting High-priority jobs before waiting Low-priority jobs
+- Use non-preemptive scheduling so an active job is allowed to finish
+- Process CSV calculations using Node.js Worker Threads
+- Provide real-time job and progress updates using Socket.IO
+- Synchronize queue and job status across connected clients
+- Track uploaded, waiting, processing, progress, completed, and error states
+- Calculate the sum of numeric values in each CSV
+- Download the processed result
+- Responsive UI with status indicators and simple animations
 
 ## Tech Stack
 
@@ -45,7 +69,7 @@ https://binaire-freznel-assessment-7p5b.onrender.com
 ## Project Structure
 
 ```text
-Binaire_Freznel_Assessment/
+priority-csv-processing-platform/
 ├── client/
 │   ├── src/
 │   │   ├── components/
@@ -77,22 +101,22 @@ Binaire_Freznel_Assessment/
 
 ## How It Works
 
-1. The client selects a CSV file and priority.
+1. The client selects a CSV file and assigns a priority.
 2. The file is uploaded to the Node.js server.
 3. The server creates a job and adds it to the priority queue.
 4. The new job is broadcast to connected clients through Socket.IO.
-5. The queue selects the next available job.
+5. The queue selects the next available job according to priority.
 6. A Worker Thread reads the CSV and calculates the sum of numeric values.
 7. The worker sends progress updates to the server.
-8. The server broadcasts those updates to all connected clients.
+8. The server broadcasts those updates to connected clients.
 9. When processing finishes, the job is marked as completed.
 10. The result is displayed and can be downloaded.
 
-## Queue and Priority
+## Priority-Based Job Scheduling
 
-The queue uses non-preemptive priority scheduling.
+The queue uses **non-preemptive priority scheduling**.
 
-Example:
+For example:
 
 ```text
 Low Job A  -> Processing
@@ -100,16 +124,18 @@ Low Job B  -> Waiting
 High Job C -> Waiting
 ```
 
-The current Low Job A is allowed to finish.
+The active Low-priority job is allowed to finish.
 
-After it finishes:
+After completion:
 
 ```text
 High Job C -> Processing
 Low Job B  -> Waiting
 ```
 
-This gives higher priority to waiting high-priority jobs without interrupting an active job.
+This approach gives higher priority to waiting urgent workloads without interrupting a job that is already being processed.
+
+This pattern can be applied to systems that handle different classes of background work, such as data imports, report generation, document processing, analytics jobs, or other asynchronous workloads.
 
 ## Worker Threads
 
@@ -122,15 +148,26 @@ The main server handles:
 - Queue management
 - Socket.IO communication
 
-The Worker Thread handles the CSV calculation separately from the main Node.js event loop.
+The Worker Thread handles CSV calculation separately from the main Node.js event loop.
 
-The deployed version uses one worker to keep memory usage suitable for the hosting environment while still demonstrating Worker Thread based processing and queue scheduling.
+```text
+Main Node.js Process
+├── HTTP Requests
+├── File Uploads
+├── Queue Management
+└── Socket.IO Communication
+        |
+        v
+   Worker Thread
+        |
+        └── CSV Calculation
+```
 
-## Progress Updates
+The deployed version uses one worker to keep memory usage suitable for the hosting environment while demonstrating Worker Thread-based processing and queue scheduling.
 
-The worker reports progress while processing the CSV.
+## Real-Time Progress Updates
 
-Socket.IO sends these updates to connected clients.
+The worker reports progress while processing the CSV, and Socket.IO broadcasts those updates to connected clients.
 
 ```text
 Waiting
@@ -146,25 +183,18 @@ Processing 80%
 Completed 100%
 ```
 
-## Deadlock Considerations
+Multiple browser clients can observe the same job state in real time.
 
-A classic deadlock can occur when tasks permanently wait for resources held by each other.
+## Concurrency and Deadlock Considerations
 
-The four common conditions are:
+A background-processing system needs clear ownership of jobs and workers to avoid tasks becoming permanently blocked.
 
-1. Mutual exclusion
-2. Hold and wait
-3. No preemption
-4. Circular wait
+The implementation keeps the queue/worker flow simple by:
 
-A deadlock in this system could leave jobs stuck, workers unavailable, and the queue unable to progress.
-
-The implementation is designed to avoid classic resource deadlocks by:
-
-- Keeping job ownership simple
-- Not making workers wait for other workers while holding a shared resource
+- Keeping job ownership explicit
 - Removing a job from the queue before assigning it to a worker
-- Making the worker available again after completion or error
+- Avoiding workers waiting on one another while holding shared resources
+- Making workers available again after completion or error
 - Continuing queue processing after a worker finishes
 
 There are no nested locks or circular resource dependencies in the queue/worker flow.
@@ -225,7 +255,7 @@ Frontend:
 http://localhost:5173
 ```
 
-## Testing Priority
+## Testing Priority Scheduling
 
 1. Upload a large Low-priority CSV.
 2. Upload another Low-priority CSV.
@@ -237,7 +267,7 @@ http://localhost:5173
 
 1. Open the application in two browser tabs.
 2. Upload a CSV from one tab.
-3. Both tabs should receive the job and status updates through Socket.IO.
+3. Both tabs receive the job and status updates through Socket.IO.
 
 ## Deployment
 
@@ -257,24 +287,26 @@ Priority Queue
 Worker Thread
       |
       v
-CSV Sum Result
+CSV Processing
+      |
+      v
+Result
 ```
 
-## Notes
+## Current Deployment Limitations
 
-Job state is kept in memory, so the deployed application is intended for demonstration and assessment use rather than permanent data storage.
+The current deployment keeps job state in memory, so it is intended as a demonstration of the asynchronous processing architecture rather than a persistent production data-processing service.
 
 Uploaded files should also be considered temporary deployment data.
+
+A production-oriented version could extend this architecture with persistent job storage, a distributed queue, multiple workers, retry handling, authentication, and durable file storage.
 
 ## Author
 
 Sameer Kumar
 
-## Assessment Use Notice
+## License / Usage
 
-> **Copyright © 2026 Sameer Kumar. All Rights Reserved.**
->
-> This repository is provided solely for technical assessment and evaluation.
-> The source code may be viewed and run for evaluation purposes, but may not
-> be copied, reused, redistributed, submitted as another person's work, or
-> incorporated into another project without prior written permission.
+Copyright © 2026 Sameer Kumar. All Rights Reserved.
+
+The source code is provided for viewing and evaluation purposes. It may not be copied, reused, redistributed, submitted as another person's work, or incorporated into another project without prior written permission.
